@@ -19,7 +19,7 @@ Easy as `go build -o . ./...`
 
 First of all, you'll need to get the legacy token - refer to [this page](https://api.slack.com/custom-integrations/legacy-tokens) for instructions.
 That legacy token doesn't allow you to get `UserID`, so you'll need to get it from the app: 
-- cick on the team in the upper-right corner of Slack App
+- click on the team in the upper-right corner of Slack App
 - choose `Profile & Account`
 - click on three vertical dots next to `Edit profile`
 - copy the member ID ( it is of form `U12345678` )
@@ -53,4 +53,4 @@ This command will remove all **your** messages in the chats with `user1`, `user2
 for the date prior to **December 1 2019**. Any message **after** December 1, 2019 will remain in the history.
 
 ## Processing Time
-Depending on the lengh of the history, and due to some limitations from Slack API service - it could take **significant** time to remove messages ( a good approximation would be 1 message/second ). You may consider [screen](https://linuxize.com/post/how-to-use-linux-screen/) or [tmux](https://github.com/tmux/tmux/wiki) and perhaps a [VPS service](https://en.wikipedia.org/wiki/Virtual_private_server).
+Depending on the length of the history, and due to some limitations from Slack API service - it could take **significant** time to remove messages ( a good approximation would be 1 message/second ). You may consider [screen](https://linuxize.com/post/how-to-use-linux-screen/) or [tmux](https://github.com/tmux/tmux/wiki) and perhaps a [VPS service](https://en.wikipedia.org/wiki/Virtual_private_server).
