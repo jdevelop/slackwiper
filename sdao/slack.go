@@ -77,7 +77,7 @@ func (s *slackDao) RemoveMessages(conversations []Conversation, cutoffDate time.
 				if cutoffDate.Unix() < int64(date) {
 					continue
 				}
-				s.logger.Debugf("Removing conversation: [%s] : %s", time.Unix(int64(date), 0).Format(dateprint), m.Channel.Name)
+				s.logger.Debugf("Removing: [%s]: %s > %s", time.Unix(int64(date), 0).Format(dateprint), m.Channel.Name, m.Text)
 				if !dryRun {
 					if err := retry(3, func() error {
 						_, _, err := s.client.DeleteMessage(m.Channel.ID, m.Timestamp)
