@@ -3,13 +3,11 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/jdevelop/slackwiper/sdao"
-	"github.com/nlopes/slack"
 	"github.com/sirupsen/logrus"
 	flag "github.com/spf13/pflag"
 )
@@ -25,30 +23,31 @@ var (
 	channelStr    = flag.StringP("channel", "c", "", "comma-separated channel names to process ( empty to interactivly select the ones )")
 	dryRun        = flag.Bool("dry-run", true, "dry-run ( do not delete anything )")
 	verbose       = flag.BoolP("verbose", "v", false, "verbose")
+	quiet         = flag.BoolP("quiet", "q", false, "less output")
 )
 
 func main() {
 	flag.Parse()
+	logger := logrus.New()
 	if *user == "" {
-		log.Println("missing user ID")
+		logger.Error("missing user ID")
 		flag.Usage()
 		os.Exit(1)
 	}
 	if *cutoffDateStr == "" {
-		log.Println("missing retain after date")
+		logger.Error("missing cutoff date")
 		flag.Usage()
 		os.Exit(1)
 	}
 
 	cutoffDate, err := time.Parse(dateformat, *cutoffDateStr)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	token := os.Getenv(tokenEnv)
 	if token == "" {
-		log.Printf("Token environment '%s' is required", tokenEnv)
-		os.Exit(1)
+		logger.Fatalf("Token environment '%s' is required", tokenEnv)
 	}
 
 	var (
@@ -57,11 +56,18 @@ func main() {
 		channels = make([]sdao.Conversation, 0)
 	)
 
-	logger := logrus.New()
+	switch {
+	case *quiet:
+		logger.SetLevel(logrus.InfoLevel)
+	case *verbose:
+		logger.SetLevel(logrus.DebugLevel)
+	default:
+		logger.SetLevel(logrus.WarnLevel)
+	}
 
 	dao, err := sdao.NewSlackDao(token, *dryRun, *user, logrus.NewEntry(logger))
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	if *channelStr == "" {
@@ -70,7 +76,7 @@ func main() {
 			fmt.Print("Proceed with '%s'? [y/N] ", name)
 			l, _, err := br.ReadLine()
 			if err != nil {
-				log.Fatal(err)
+				logger.Fatal(err)
 			}
 			return string(l) == "y" || string(l) == "Y"
 		}
@@ -88,7 +94,7 @@ func main() {
 
 	convs, err := dao.ListConversations()
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	for _, v := range convs {
@@ -98,40 +104,21 @@ func main() {
 	}
 
 	if len(channels) == 0 {
-		log.Println("No channels selected, quitting")
+		logger.Warn("No channels selected, quitting")
 		os.Exit(2)
 	}
 
 	if *verbose {
-		log.Println("Processing channels...")
+		logger.Info("Processing channels...")
 		for k := range channels {
-			log.Printf("\t%s", k)
+			logger.Infof("\t%s", k)
 		}
 	}
 
 	removed, err := dao.RemoveMessages(channels, cutoffDate, *dryRun)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 	}
 
-	log.Printf("Removed %d messages from %d channels/DMs", removed, len(channels))
-}
-
-func retry(times int, f func() error) error {
-	var lastError error
-	for i := 0; i < times; i++ {
-		if err := f(); err != nil {
-			lastError = err
-			switch v := err.(type) {
-			case *slack.RateLimitedError:
-				log.Printf("Retrying %+v of %d", v.RetryAfter, times)
-				time.Sleep(v.RetryAfter)
-			default:
-				// do nothing
-			}
-		} else {
-			return nil
-		}
-	}
-	return lastError
+	logger.Printf("Removed %d messages from %d channels/DMs", removed, len(channels))
 }
