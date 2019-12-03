@@ -2,7 +2,6 @@ package sdao
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"time"
 
@@ -73,18 +72,18 @@ func (s *slackDao) RemoveMessages(conversations []Conversation, cutoffDate time.
 				}
 				date, err := strconv.ParseFloat(m.Timestamp, 64)
 				if err != nil {
-					log.Fatal(err)
+					s.logger.Fatal(err)
 				}
 				if cutoffDate.Unix() < int64(date) {
 					continue
 				}
-				log.Printf("Removing conversation: [%s] : %s", time.Unix(int64(date), 0).Format(dateprint), m.Channel.Name)
+				s.logger.Debugf("Removing conversation: [%s] : %s", time.Unix(int64(date), 0).Format(dateprint), m.Channel.Name)
 				if !dryRun {
 					if err := retry(3, func() error {
 						_, _, err := s.client.DeleteMessage(m.Channel.ID, m.Timestamp)
 						return err
 					}); err != nil {
-						log.Printf("Can't remove message %s from channel %s: %+v", m.Timestamp, m.Channel.Name, err)
+						s.logger.Errorf("Can't remove message %s from channel %s: %+v", m.Timestamp, m.Channel.Name, err)
 					} else {
 						removed += 1
 					}

@@ -18,9 +18,9 @@ const (
 )
 
 var (
-	user          = flag.StringP("user", "u", "", "User id token")
-	cutoffDateStr = flag.StringP("cutoff", "t", "", "the date to retain messages after ( date yyyy/mm/dd )")
-	channelStr    = flag.StringP("channel", "c", "", "comma-separated channel names to process ( empty to interactivly select the ones )")
+	user          = flag.StringP("user", "u", "", "user id")
+	cutoffDateStr = flag.StringP("cutoff", "t", "", "date to retain messages after ( date yyyy/mm/dd )")
+	channelStr    = flag.StringP("channel", "c", "", "comma-separated channel names to process ( empty to interactivly select ones )")
 	dryRun        = flag.Bool("dry-run", true, "dry-run ( do not delete anything )")
 	verbose       = flag.BoolP("verbose", "v", false, "verbose")
 	quiet         = flag.BoolP("quiet", "q", false, "less output")
@@ -51,7 +51,7 @@ func main() {
 	}
 
 	var (
-		confirm  func(string) bool
+		confirm  func(string, ...interface{}) bool
 		void     = struct{}{}
 		channels = make([]sdao.Conversation, 0)
 	)
@@ -65,15 +65,15 @@ func main() {
 		logger.SetLevel(logrus.WarnLevel)
 	}
 
-	dao, err := sdao.NewSlackDao(token, *dryRun, *user, logrus.NewEntry(logger))
+	dao, err := sdao.NewSlackDao(token, *dryRun, *user, logrus.NewEntry(logger).WithField("UserID", *user))
 	if err != nil {
 		logger.Fatal(err)
 	}
 
 	if *channelStr == "" {
 		br := bufio.NewReader(os.Stdin)
-		confirm = func(name string) bool {
-			fmt.Print("Proceed with '%s'? [y/N] ", name)
+		confirm = func(str string, args ...interface{}) bool {
+			fmt.Printf(str+" [y/N] ", args...)
 			l, _, err := br.ReadLine()
 			if err != nil {
 				logger.Fatal(err)
@@ -86,7 +86,7 @@ func main() {
 		for _, v := range namesSlice {
 			names[strings.TrimSpace(v)] = void
 		}
-		confirm = func(name string) bool {
+		confirm = func(name string, _ ...interface{}) bool {
 			_, ok := names[name]
 			return ok
 		}
@@ -98,7 +98,7 @@ func main() {
 	}
 
 	for _, v := range convs {
-		if confirm(v.Name) {
+		if confirm("Proceed with conversation '%s'?", v.Name) {
 			channels = append(channels, v)
 		}
 	}
@@ -113,6 +113,11 @@ func main() {
 		for k := range channels {
 			logger.Infof("\t%s", k)
 		}
+	}
+
+	if !confirm("Proceed with the chosen channels: %d", len(channels)) {
+		logger.Println("Aborting")
+		os.Exit(0)
 	}
 
 	removed, err := dao.RemoveMessages(channels, cutoffDate, *dryRun)
