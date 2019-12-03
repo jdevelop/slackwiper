@@ -51,3 +51,6 @@ SLACK_TOKEN='xoxo-......' ./slackwiper -c 'user1,user2,channel1,channel2' -t 201
 ```
 This command will remove all **your** messages in the chats with `user1`, `user2`, `channel1`, `channel2` 
 for the date prior to **December 1 2019**. Any message **after** December 1, 2019 will remain in the history.
+
+## Processing Time
+Depending on the lengh of the history, and due to some limitations from Slack API service - it could take **significant** time to remove messages ( a good approximation would be 1 message/second ). You may consider [screen](https://linuxize.com/post/how-to-use-linux-screen/) or [tmux](https://github.com/tmux/tmux/wiki) and perhaps a [VPS service](https://en.wikipedia.org/wiki/Virtual_private_server).
