@@ -27,7 +27,7 @@ func NewSlackDao(token string, dryRun bool, userID string, log *logrus.Entry) (*
 	api := slack.New(token)
 	user, err := api.GetUserInfo(userID)
 	if err != nil {
-		return nil, fmt.Errorf("can't get user information: %+v", err)
+		return nil, fmt.Errorf("can't get user information: %w", err)
 	}
 	return &slackDao{
 		client:   api,
@@ -60,10 +60,10 @@ loop:
 			}
 		})
 		if err != nil {
-			return -1, fmt.Errorf("Failed to process page %d: %+v: %+T", page, err, err)
+			return -1, fmt.Errorf("Failed to process page %d: %w", page, err)
 		}
 		if len(msgs.Matches) == 0 {
-			break
+			break loop
 		}
 		s.logger.Infof("Processing page %d of %d", page, (msgs.TotalCount+pagesize-1)/pagesize)
 		for _, m := range msgs.Matches {
@@ -124,12 +124,12 @@ func (s *slackDao) ListConversations() ([]Conversation, error) {
 	}
 	ims, err := s.client.GetIMChannels()
 	if err != nil {
-		return nil, fmt.Errorf("can't get IM conversations: %+w", err)
+		return nil, fmt.Errorf("can't get IM conversations: %w", err)
 	}
 	for _, im := range ims {
 		u, err := s.client.GetUserInfo(im.Conversation.User)
 		if err != nil {
-			return nil, fmt.Errorf("Can't find user: %s: %+v", im.Conversation.User, err)
+			return nil, fmt.Errorf("Can't find user: %s: %w", im.Conversation.User, err)
 		}
 		s.logger.Debugf("Processing direct message: ID: %s, Name: %s\n", im.ID, u.Name)
 		conversations = append(conversations, Conversation{ID: u.ID, Name: u.Name})
