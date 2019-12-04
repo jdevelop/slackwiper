@@ -16,6 +16,10 @@ Keep only the history that is relevant.
 
 Easy as `go build -o . ./...`
 
+## Download
+
+[Download](https://github.com/jdevelop/slackwiper/releases/tag/v1.0.0) binaries for Windows, MacOS, Linux (x64).
+
 ## Usage
 
 First of all, you'll need to get the legacy token - refer to [this page](https://api.slack.com/custom-integrations/legacy-tokens) for instructions.
