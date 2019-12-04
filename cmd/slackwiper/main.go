@@ -26,7 +26,7 @@ const (
 var (
 	user          = flag.StringP("user", "u", "", "user id")
 	cutoffDateStr = flag.StringP("cutoff", "t", "", "date to retain messages after ( date yyyy/mm/dd )")
-	channelStr    = flag.StringP("conversation", "c", "", "comma-separated conversation names to process ( empty to interactivly select ones )")
+	channelStr    = flag.StringP("chats", "c", "", "comma-separated chat names to process ( empty to interactivly select ones )")
 	dryRun        = flag.Bool("dry-run", true, "dry-run ( do not delete anything )")
 	verbose       = flag.BoolP("verbose", "v", false, "verbose")
 	quiet         = flag.BoolP("quiet", "q", false, "less output")
@@ -130,16 +130,16 @@ answers:
 	}
 
 	if len(channels) == 0 {
-		logger.Warn("No conversations selected, quitting")
+		logger.Warn("No chats selected, quitting")
 		os.Exit(2)
 	}
 
-	logger.Info("Conversations to wipe:")
+	logger.Info("Chats to wipe:")
 	for _, v := range channels {
 		logger.Infof("\t%s", v.Name)
 	}
 
-	fmt.Printf("Last chance: wipe %d conversations? [y(es)/N(o)] ", len(channels))
+	fmt.Printf("Last chance: wipe %d chats? [y(es)/N(o)] ", len(channels))
 	if readYesNo(false) == AnswerNo {
 		logger.Println("Aborting")
 		os.Exit(0)

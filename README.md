@@ -28,7 +28,7 @@ That legacy token doesn't allow you to get `UserID`, so you'll need to get it fr
 Now with using the legacy token and user id:
 ```
 Usage of ./slackwiper:
-  -c, --channel string   comma-separated channel names to process ( empty to interactivly select ones )
+  -c, --chats string     comma-separated chat names to process ( empty to interactivly select ones )
   -t, --cutoff string    date to retain messages after ( date yyyy/mm/dd )
       --dry-run          dry-run ( do not delete anything ) (default true)
   -q, --quiet            less output
