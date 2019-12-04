@@ -19,15 +19,15 @@ type ConversationDao interface {
 
 func retry(times int, f func() error) error {
 	var lastError error
-	for i := 0; i < times; i++ {
+	for i := 1; i <= times; i++ {
 		if err := f(); err != nil {
 			lastError = err
 			switch v := err.(type) {
 			case *slack.RateLimitedError:
-				logrus.Warn("Retrying %+v of %d", v.RetryAfter, times)
+				logrus.Warnf("Retrying %+v, %d of %d", v.RetryAfter, i, times)
 				time.Sleep(v.RetryAfter)
 			default:
-				// do nothing
+				return err
 			}
 		} else {
 			return nil

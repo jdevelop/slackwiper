@@ -20,6 +20,7 @@ const (
 	dateformat = "2006/01/02"
 	dateprint  = "2006/01/02 15:04:05"
 	pagesize   = 100
+	retries    = 10
 )
 
 func NewSlackDao(token string, dryRun bool, userID string, log *logrus.Entry) (*slackDao, error) {
@@ -42,9 +43,10 @@ func (s *slackDao) RemoveMessages(conversations []Conversation, cutoffDate time.
 	for i, c := range conversations {
 		channels[c.ID] = &conversations[i]
 	}
+loop:
 	for {
 		var msgs *slack.SearchMessages
-		err := retry(3, func() error {
+		err := retry(retries, func() error {
 			if m, err := s.client.SearchMessages(`from:@`+s.username, slack.SearchParameters{
 				Sort:          "timestamp",
 				SortDirection: "asc",
@@ -65,21 +67,21 @@ func (s *slackDao) RemoveMessages(conversations []Conversation, cutoffDate time.
 		}
 		s.logger.Infof("Processing page %d of %d", page, (msgs.TotalCount+pagesize-1)/pagesize)
 		for _, m := range msgs.Matches {
+			date, err := strconv.ParseFloat(m.Timestamp, 64)
+			if err != nil {
+				s.logger.Fatal(err)
+			}
+			if cutoffDate.Unix() < int64(date) {
+				break loop
+			}
 			if _, ok := channels[m.Channel.ID]; ok {
 				if m.User != s.userID {
-					s.logger.Debugf("Skipping user %s:%s in channel %s", m.User, m.Username, m.Channel.Name)
+					s.logger.Tracef("Skipping user %s:%s in channel %s", m.User, m.Username, m.Channel.Name)
 					continue
 				}
-				date, err := strconv.ParseFloat(m.Timestamp, 64)
-				if err != nil {
-					s.logger.Fatal(err)
-				}
-				if cutoffDate.Unix() < int64(date) {
-					continue
-				}
-				s.logger.Debugf("Removing: [%s]: %s > %s", time.Unix(int64(date), 0).Format(dateprint), m.Channel.Name, m.Text)
+				s.logger.Infof("Removing: [%s]: %s > %s", time.Unix(int64(date), 0).Format(dateprint), m.Channel.Name, m.Text)
 				if !dryRun {
-					if err := retry(3, func() error {
+					if err := retry(retries, func() error {
 						_, _, err := s.client.DeleteMessage(m.Channel.ID, m.Timestamp)
 						return err
 					}); err != nil {
