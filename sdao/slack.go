@@ -3,6 +3,7 @@ package sdao
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/nlopes/slack"
@@ -39,15 +40,17 @@ func NewSlackDao(token string, dryRun bool, userID string, log *logrus.Entry) (*
 
 func (s *slackDao) RemoveMessages(conversations []Conversation, cutoffDate time.Time, dryRun bool) (int, error) {
 	page, removed := 1, 0
-	var channels = make(map[string]*Conversation)
-	for i, c := range conversations {
-		channels[c.ID] = &conversations[i]
+	var inString = make([]string, 0)
+	for _, c := range conversations {
+		inString = append(inString, "in:"+c.Name)
 	}
+	searchQuery := `from:` + s.username + " " + strings.Join(inString, " ")
+	s.logger.Debugf("search query: '%s'", searchQuery)
 loop:
 	for {
 		var msgs *slack.SearchMessages
 		err := retry(retries, func() error {
-			if m, err := s.client.SearchMessages(`from:@`+s.username, slack.SearchParameters{
+			if m, err := s.client.SearchMessages(searchQuery, slack.SearchParameters{
 				Sort:          "timestamp",
 				SortDirection: "asc",
 				Count:         pagesize,
@@ -62,10 +65,11 @@ loop:
 		if err != nil {
 			return -1, fmt.Errorf("Failed to process page %d: %w", page, err)
 		}
-		if len(msgs.Matches) == 0 {
+		if page > msgs.Pagination.Last {
+			s.logger.Infof("No more messages to process, stopping: %+v", *msgs)
 			break loop
 		}
-		s.logger.Infof("Processing page %d of %d", page, (msgs.TotalCount+pagesize-1)/pagesize)
+		s.logger.Infof("Processing page %d of %d", page, msgs.Pagination.Last)
 		for _, m := range msgs.Matches {
 			date, err := strconv.ParseFloat(m.Timestamp, 64)
 			if err != nil {
@@ -74,26 +78,20 @@ loop:
 			if cutoffDate.Unix() < int64(date) {
 				break loop
 			}
-			if _, ok := channels[m.Channel.ID]; ok {
-				if m.User != s.userID {
-					s.logger.Tracef("Skipping user %s:%s in channel %s", m.User, m.Username, m.Channel.Name)
-					continue
-				}
-				s.logger.Infof("Removing: [%s]: %s > %s", time.Unix(int64(date), 0).Format(dateprint), m.Channel.Name, m.Text)
-				if !dryRun {
-					if err := retry(retries, func() error {
-						_, _, err := s.client.DeleteMessage(m.Channel.ID, m.Timestamp)
-						return err
-					}); err != nil {
-						s.logger.Errorf("Can't remove message %s from channel %s: %+v", m.Timestamp, m.Channel.Name, err)
-					} else {
-						removed += 1
-					}
+			s.logger.Infof("Removing: [%s]: %s > %s", time.Unix(int64(date), 0).Format(dateprint), m.Channel.Name, m.Text)
+			if !dryRun {
+				if err := retry(retries, func() error {
+					_, _, err := s.client.DeleteMessage(m.Channel.ID, m.Timestamp)
+					return err
+				}); err != nil {
+					s.logger.Errorf("Can't remove message %s from channel %s: %s\n%+v", m.Timestamp, m.Channel.Name, m.Text, err)
+				} else {
+					removed += 1
 				}
 			}
+			time.Sleep(600 * time.Millisecond)
 		}
 		page += 1
-		time.Sleep(500 * time.Millisecond)
 	}
 	return removed, nil
 }

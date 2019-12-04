@@ -30,6 +30,7 @@ var (
 	dryRun        = flag.Bool("dry-run", true, "dry-run ( do not delete anything )")
 	verbose       = flag.BoolP("verbose", "v", false, "verbose")
 	quiet         = flag.BoolP("quiet", "q", false, "less output")
+	attempts      = flag.IntP("attempts", "a", 1, "number of loops over the chat history")
 )
 
 func main() {
@@ -145,9 +146,16 @@ answers:
 		os.Exit(0)
 	}
 
-	removed, err := dao.RemoveMessages(channels, cutoffDate, *dryRun)
-	if err != nil {
-		logger.Fatal(err)
+	var removed int
+
+	for i := 0; i < *attempts; i++ {
+		logger.Infof("Removal loop %d of %d", i+1, *attempts)
+		rmvd, err := dao.RemoveMessages(channels, cutoffDate, *dryRun)
+		if err != nil {
+			logger.Fatal(err)
+		}
+		removed += rmvd
+		time.Sleep(10 * time.Second)
 	}
 
 	logger.Printf("Removed %d messages from %d channels/DMs", removed, len(channels))
