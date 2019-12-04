@@ -10,10 +10,10 @@ dist:
 	mkdir dist
 
 darwin:
-	GOOS=darwin go build ${BUILDARGS} -o dist/slackwiper_darwin ./cmd/slackwiper
+	CGO_ENABLED=0 GOOS=darwin go build ${BUILDARGS} -o dist/slackwiper_darwin ./cmd/slackwiper
 
 linux:
-	GOOS=linux go build ${BUILDARGS} -o dist/slackwiper_linux ./cmd/slackwiper
+	CGO_ENABLED=0 GOOS=linux go build ${BUILDARGS} -o dist/slackwiper_linux ./cmd/slackwiper
 
 windows:
-	GOOS=windows go build ${BUILDARGS} -o dist/slackwiper_windows ./cmd/slackwiper
+	CGO_ENABLED=0 GOOS=windows go build ${BUILDARGS} -o dist/slackwiper_windows ./cmd/slackwiper
